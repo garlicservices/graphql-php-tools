@@ -1,7 +1,7 @@
 {
   "name": "garlic/graphql-php-tools",
   "description": "Olamobile GraphQL multiple schemas stitching.",
-  "license": "GPL (free)",
+  "license": "MIT",
   "minimum-stability": "stable",
   "repositories": [
   ],
