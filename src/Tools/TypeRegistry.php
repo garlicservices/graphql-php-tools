@@ -1,5 +1,5 @@
 <?php
-namespace Ola\GraphQL\Tools;
+namespace Ola\Tools;
 
 use GraphQL\Type\Definition\ListOfType;
 use GraphQL\Type\Definition\NonNull;

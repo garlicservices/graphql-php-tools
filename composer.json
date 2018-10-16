@@ -1,5 +1,5 @@
 {
-  "name": "olamobile/graphql-php-tools",
+  "name": "garlic/graphql-php-tools",
   "description": "Olamobile GraphQL multiple schemas stitching.",
   "license": "GPL (free)",
   "minimum-stability": "stable",
@@ -13,7 +13,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Ola\\": "src/Ola"
+      "Ola\\": "src/"
     }
   }
 }

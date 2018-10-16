@@ -1,5 +1,5 @@
 <?php
-namespace Ola\GraphQL\Tools;
+namespace Ola\Tools;
 
 use GraphQL\Language\Printer;
 use GraphQL\Utils\SchemaPrinter;

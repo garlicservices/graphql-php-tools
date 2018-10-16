@@ -1,5 +1,5 @@
 <?php
-namespace Ola\GraphQL\Tools;
+namespace Ola\Tools;
 
 use GraphQL\Error\Error;
 use GraphQL\Executor\Values;
