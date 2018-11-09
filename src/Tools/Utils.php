@@ -3,7 +3,7 @@ namespace Ola\Tools;
 
 use GraphQL\Type\TypeKind;
 
-class Utils
+class Utils extends \GraphQL\Utils\Utils
 {
      private static $kinds = [];
 

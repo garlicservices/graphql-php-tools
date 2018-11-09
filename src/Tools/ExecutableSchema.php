@@ -30,9 +30,9 @@ use GraphQL\Type\Introspection;
 use GraphQL\Type\TypeKind;
 
 use GraphQL\Utils\BuildSchema;
-use GraphQL\Utils\Utils;
+//use GraphQL\Utils\Utils;
 
-use Ola\GraphQL\Tools\ExtendSchema;
+use Ola\Tools\ExtendSchema;
 
 class SchemaError extends \ErrorException {
     public $message;
@@ -293,8 +293,9 @@ class ExecutableSchema {
         return $ast;
     }
 
-    public static function addResolveFunctionsToSchema(&$schema, $resolveFunctions) {
+    public static function addResolveFunctionsToSchema(Schema &$schema, $resolveFunctions) {
         foreach ($resolveFunctions as $typeName => $resolver) {
+            
             $type = $schema->getType($typeName);
             if (!$type && $typeName !== '__schema') {
                 throw new SchemaError("\"$typeName\" defined in resolvers, but not in schema");
@@ -323,6 +324,7 @@ class ExecutableSchema {
                 }
                 $field = $fields[$fieldName];
                 $fieldResolve = $callable;
+                
                 if (is_callable($fieldResolve)) {
                     // for convenience. Allows shorter syntax in resolver definition file
                     self::setFieldProperties($field, ['resolve' => $fieldResolve ]);

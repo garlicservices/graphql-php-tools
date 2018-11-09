@@ -43,32 +43,32 @@ class TypeRegistry {
             return Type::listOf($this->resolveType($type->getWrappedType(true)));
         } else if ($type instanceof NonNull) {
             return Type::nonNull($this->resolveType($type->getWrappedType(true)));
-        } else if (Type::isNamedType($type)) {
+        } else if (Type::getNamedType($type)) {
             return $this->getType(Type::getNamedType($type)->name);
         } else {
             return $type;
         }
     }
 
-    public function addSchema($schema) {
+    public function addSchema($schema, $service = null) {
         $query = $schema->getQueryType();
         if ($query) {
             $fieldNames = array_keys($query->getFields());
             foreach ($fieldNames as $fieldName) {
-                $this->schemaByField['query'][$fieldName] = $schema;
+                $this->schemaByField['query'][$service][$fieldName] = $schema;
             }
         }
         $mutation = $schema->getMutationType();
         if ($mutation) {
             $fieldNames = array_keys($mutation->getFields());
             foreach ($fieldNames as $fieldName) {
-                $this->schemaByField['mutation'][$fieldName] = $schema;
+                $this->schemaByField['mutation'][$service][$fieldName] = $schema;
             }
         }
     }
 
     public function addType($name, $type, $onTypeConflict=null) {
-        if ($this->types[$name]) {
+        if (isset($this->types[$name])) {
             if (!empty($onTypeConflict)) {
                 $type = call_user_func($onTypeConflict, $this->types[$name], $type);
             } else {

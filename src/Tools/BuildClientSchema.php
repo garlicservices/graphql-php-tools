@@ -27,7 +27,7 @@ use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Definition\UnionType;
 
 use GraphQL\Utils\AST;
-use GraphQL\Utils\Utils;
+//use GraphQL\Utils\Utils;
 
 
 
@@ -296,7 +296,7 @@ class BuildClientSchema {
     }
 
     private function getNamedType($typeName){
-        if ($this->typeDefCache[$typeName]) {
+        if (isset($this->typeDefCache[$typeName])) {
           return $this->typeDefCache[$typeName];
         }
         $typeIntrospection = $this->typeIntrospectionMap[$typeName];

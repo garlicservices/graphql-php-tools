@@ -21,7 +21,7 @@ use GraphQL\Language\AST\NodeKind;
 use GraphQL\Language\Visitor;
 use GraphQL\Language\Parser;
 
-use GraphQL\Utils\Utils;
+//use GraphQL\Utils\Utils;
 use GraphQL\Utils\BuildSchema;
 
 use GraphQL\Type\Definition\Type;
@@ -36,9 +36,9 @@ use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\GraphQL;
 
 
-use Ola\GraphQL\Tools\ExecutableSchema;
-use Ola\GraphQL\Tools\ExtendSchema;
-use Ola\GraphQL\Tools\TypeRegistry;
+use Ola\Tools\ExecutableSchema;
+use Ola\Tools\ExtendSchema;
+use Ola\Tools\TypeRegistry;
 
 Class MergeInfo {
     private $typeRegistry;
@@ -409,7 +409,7 @@ class MergeSchemas
         return $merger->merge($schemas, $resolvers, $onTypeConflict);
     }
 
-    public function __construct($schemas){
+    public function __construct($schemas, $resolvers, $onTypeConflict){
         if(!is_array($schemas)){
             throw new \Exception("Input schemas must be array of \"GraphQL\\Type\\Schema\" or string schema definitions");
         }
@@ -427,7 +427,6 @@ class MergeSchemas
             };
         }
 
-
         $queryFields = [];
         $mutationFields = [];
 
@@ -440,12 +439,12 @@ class MergeSchemas
 
         foreach ($schemas as $key => $schema) {
             if ($schema instanceof Schema) {
-                $actualSchemas[] = $schema;
+                $actualSchemas[$key] = $schema;
             } else if (is_string($schema)) {
                 $parsedSchemaDocument = Parser::parse($schema);
                 try {
                     $actualSchema = BuildSchema::buildAST($parsedSchemaDocument);
-                    $actualSchemas[] = $actualSchema;
+                    $actualSchemas[$key] = $actualSchema;
                 } catch (\Exception $e) {
                     // Could not create a schema from parsed string, will use extensions
                 }
@@ -457,22 +456,24 @@ class MergeSchemas
         }
 
         foreach ($actualSchemas as $key => $schema) {
-            $typeRegistry->addSchema($schema);
+            $typeRegistry->addSchema($schema, $key);
             $queryType = $schema->getQueryType();
             $mutationType = $schema->getMutationType();
             foreach ($schema->getTypeMap() as $typeName => $type) {
-                if (Type::isNamedType($type) && substr(Type::getNamedType($type)->name, 0, 2) !== '__' &&  $type !== $queryType && $type !== $mutationType) {
+                if (Type::getNamedType($type) && substr(Type::getNamedType($type)->name, 0, 2) !== '__' &&  $type !== $queryType && $type !== $mutationType) {
                     $newType = null;
                     if (Type::isCompositeType($type) || $type instanceof InputObjectType) {
                         $newType = $this->recreateCompositeType($schema, $type, $typeRegistry);
                     } else {
                         $newType = Type::getNamedType($type);
                     }
+                    
+                    
                     $typeRegistry->addType($newType->name, $newType, $onTypeConflict);
                 }
             };
         }
-
+        
         // This is not a bug/oversight, we iterate twice cause we want to first
         // resolve all types and then force the type thunks
         foreach ($actualSchemas as $key => $schema) {
@@ -480,43 +481,80 @@ class MergeSchemas
             $mutationType = $schema->getMutationType();
 
             foreach ($queryType->getFields() as $name => $val) {
-                if (!$fullResolvers['Query']) {
+                if (!isset($fullResolvers['Query'])) {
                     $fullResolvers['Query'] = [];
                 }
-                $fullResolvers['Query'][$name] = $this->createDelegatingResolver($mergeInfo, 'query', $name);
+                $fullResolvers['Query'][$key][$name] = $this->createDelegatingResolver($mergeInfo, 'query', $name);
+                
+                
+//                var_dump($name);
+                
             }
 
-            $queryFields = array_merge($queryFields, $this->fieldMapToFieldConfigMap($queryType->getFields(), $typeRegistry));
+            $queryFields = array_merge(
+                $queryFields,
+                [
+                    $key => new ObjectType(
+                        [
+                            'name' => $key.'Queries',
+                            'fields' => $this->fieldMapToFieldConfigMap($queryType->getFields(), $typeRegistry),
+                        ]
+                    )
+                ]
+            );
+            
+            
             if ($mutationType) {
-                if (!$fullResolvers['Mutation']) {
+                if (!isset($fullResolvers['Mutation'])) {
                     $fullResolvers['Mutation'] = [];
                 }
                 foreach ($mutationType->getFields() as $name => $val) {
-                    $fullResolvers['Mutation'][$name] = $this->createDelegatingResolver($mergeInfo, 'mutation', $name);
+                    $fullResolvers['Mutation'][$key][$name] = $this->createDelegatingResolver($mergeInfo, 'mutation', $name);
                 }
 
-                $mutationFields = array_merge($mutationFields, $this->fieldMapToFieldConfigMap($mutationType->getFields(), $typeRegistry));
+                if(in_array($key, array_keys($queryFields))) {
+                    $mutations = $queryFields[$key];
+                } else {
+                
+                }
+                
+                $mutationFields = array_merge(
+                    $mutationFields,
+                    [
+                        $key => new ObjectType(
+                            [
+                                'name' => $key.'Mutations',
+                                'fields' => $this->fieldMapToFieldConfigMap($mutationType->getFields(), $typeRegistry),
+                            ]
+                        )
+                    ]
+                );
             }
         }
-
+        
         $passedResolvers = [];
-
-        if(is_callable($resolvers)) $passedResolvers = call_user_func($resolvers, $mergeInfo);
-
-        if(count($passedResolvers))
-        foreach ($passedResolvers as $typeName => $type) {
-            if ($type instanceof ScalarType) {
-                break;
-            }
-            foreach ($type as $fieldName => $field) {
-                if ($field['fragment']) {
-                    $typeRegistry->addFragment($typeName, $fieldName, $field['fragment']);
+        if(is_callable($resolvers)) {
+            $passedResolvers = call_user_func($resolvers, $mergeInfo);
+        }
+        
+        if(count($passedResolvers)){
+            foreach ($passedResolvers as $typeName => $type) {
+                if ($type instanceof ScalarType) {
+                    break;
                 }
+                
+                foreach ($type as $fieldName => $field) {
+                    if (isset($field['fragment'])) {
+                        $typeRegistry->addFragment($typeName, $fieldName, $field['fragment']);
+                    }
+                };
             };
-        };
+        }
 
         $fullResolvers = $this->mergeDeep($fullResolvers, $passedResolvers);
-
+        
+//        var_dump($fullResolvers['Query']['notification']['AddressFind']);
+        
         $query = new ObjectType([
             'name' => 'Query',
             'fields' => $queryFields
@@ -529,13 +567,13 @@ class MergeSchemas
                 'fields' => $mutationFields,
             ]);
         }
-
+        
         $mergedSchema = new Schema([
             'query' => $query,
             'mutation' => $mutation,
             'types' => $typeRegistry->getAllTypes(),
         ]);
-
+        
         foreach ($extensions as $key => $extension) {
             $mergedSchema = ExtendSchema::extend($mergedSchema, $extension);
         };
@@ -545,7 +583,8 @@ class MergeSchemas
         return $mergedSchema;
     }
 
-    private function mergeDeep($target, $source) {
+    private function mergeDeep($target, $source)
+    {
         $output = $target;
         if (is_array($target) && is_array($source)) {
             foreach ($source as $key => $src) {
@@ -553,13 +592,19 @@ class MergeSchemas
                     if(empty($target[$key])){
                         $output[$key] = $src;
                     }else{
+                        
+                        var_dump(array_keys($target));
+                        
                         $output[$key] = $this->mergeDeep($target[$key], $source[$key]);
                     }
                 }else{
                     $output[$key] = $src;
                 }
             };
+        } else {
+            $output[$key] = $src;
         }
+        
         return $output;
     }
 
@@ -576,7 +621,7 @@ class MergeSchemas
             return new ObjectType([
                 'name' => $type->name,
                 'description' => $type->description,
-                'isTypeOf' => $type->isTypeOf,
+                'isTypeOf' => $type->isTypeOf ?? '',
                 'fields' => function() use($fields, $registry) {
                                 return $this->fieldMapToFieldConfigMap($fields, $registry);
                 },
@@ -632,7 +677,7 @@ class MergeSchemas
         return $result;
     }
 
-    private function fieldToFieldConfig(\GraphQL\Type\Definition\FieldDefinition $field, \Ola\GraphQL\Tools\TypeRegistry $registry) {
+    private function fieldToFieldConfig(\GraphQL\Type\Definition\FieldDefinition $field, \Ola\Tools\TypeRegistry $registry) {
         return [
             'type' => $registry->resolveType($field->getType()),
             'args' => $this->argsToFieldConfigArgumentMap($field->args, $registry),
@@ -649,7 +694,7 @@ class MergeSchemas
         return $result;
     }
 
-    private function argumentToArgumentConfig(\GraphQL\Type\Definition\FieldArgument $argument, \Ola\GraphQL\Tools\TypeRegistry $registry) {
+    private function argumentToArgumentConfig(\GraphQL\Type\Definition\FieldArgument $argument, \Ola\Tools\TypeRegistry $registry) {
         return [
             'name' => $argument->name,
             'type' => $registry->resolveType($argument->getType()),
