@@ -4,6 +4,7 @@ namespace Ola\Tools;
 use GraphQL\Error\Error;
 use GraphQL\Executor\Values;
 
+use GraphQL\Language\DirectiveLocation;
 use GraphQL\Language\Parser;
 use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Language\AST\NodeKind;
@@ -322,7 +323,7 @@ class BuildClientSchema {
 
     private function buildDirective($directiveIntrospection) {
         // Support deprecated `on****` fields for building `locations`, as this is used by GraphiQL which may need to support outdated servers.
-        $locations = $directiveIntrospection->locations ? $directiveIntrospection->locations :  [];
+        $locations = isset($directiveIntrospection->locations) ? $directiveIntrospection->locations :  [];
         $onField = !$directiveIntrospection->onField ? [] : [DirectiveLocation::FIELD];
         $onOperation = !$directiveIntrospection->onOperation ? [] : [DirectiveLocation::QUERY, DirectiveLocation::MUTATION, DirectiveLocation::SUBSCRIPTION];
         $onFragment = !$directiveIntrospection->onFragment ? [] : [DirectiveLocation::FRAGMENT_DEFINITION, DirectiveLocation::FRAGMENT_SPREAD, DirectiveLocation::INLINE_FRAGMENT];
@@ -332,7 +333,7 @@ class BuildClientSchema {
         return new Directive([
             'name' => $directiveIntrospection->name,
             'description' => $directiveIntrospection->description,
-            $locations,
+            'locations' => $locations,
             'args' => $this->buildInputValueDefMap($directiveIntrospection->args),
         ]);
     }
