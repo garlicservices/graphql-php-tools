@@ -1,11 +1,11 @@
 <?php
-namespace Ola\Tools;
+namespace Ola\GraphQL\Tools;
 
 use GraphQL\Type\TypeKind;
 
 class Utils extends \GraphQL\Utils\Utils
 {
-     private static $kinds = [];
+    private static $kinds = [];
 
     /**
      * @param $traversable

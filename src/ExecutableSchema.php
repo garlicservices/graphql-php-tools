@@ -1,5 +1,5 @@
 <?php
-namespace Ola\Tools;
+namespace Ola\GraphQL\Tools;
 
 use GraphQL\Error\Error;
 use GraphQL\Executor\Values;
@@ -53,19 +53,19 @@ class TypeError extends \ErrorException {
 
 /**
  * Build instance of `GraphQL\Type\Schema` from  Introspection result of a Client Schema
-*/
+ */
 class ExecutableSchema {
 
     /**
-    * put your comment there...
-    *
-    * @param mixed $typeDefs
-    * @param mixed $resolvers
-    * @param mixed $connectors
-    * @param mixed $logger
-    * @param mixed $allowUndefinedInResolve
-    * @param mixed $resolverValidationOptions
-    */
+     * put your comment there...
+     *
+     * @param mixed $typeDefs
+     * @param mixed $resolvers
+     * @param mixed $connectors
+     * @param mixed $logger
+     * @param mixed $allowUndefinedInResolve
+     * @param mixed $resolverValidationOptions
+     */
     public static function makeExecutableSchema($typeDefs, $resolvers = [], $connectors = null, $logger = null, $allowUndefinedInResolve = true, $resolverValidationOptions = []) {
         $execSchema = new self();
         return $execSchema->makeEx($typeDefs, $resolvers, $connectors, $logger, $allowUndefinedInResolve, $resolverValidationOptions);
@@ -74,7 +74,7 @@ class ExecutableSchema {
     private function makeEx($typeDefs, $resolvers, $connectors, $logger, $allowUndefinedInResolve, $resolverValidationOptions) {
         $schema = $this->_generateSchema($typeDefs, $resolvers, $logger, $allowUndefinedInResolve, $resolverValidationOptions);
 
-        if (is_callable($resolvers['__schema'] )) {
+        if (isset($resolvers['__schema']) && is_callable($resolvers['__schema'])) {
             $this->addSchemaLevelResolveFunction($schema, $resolvers['__schema']);
         }
         if ($connectors) {
@@ -198,11 +198,11 @@ class ExecutableSchema {
     }
 
     /**
-    * If a resolve function is not given, then a default resolve behavior is used
-    * which takes the property of the source object of the same name as the field
-    * and returns it as the result, or if it's a function, returns the result
-    * of calling that function.
-    */
+     * If a resolve function is not given, then a default resolve behavior is used
+     * which takes the property of the source object of the same name as the field
+     * and returns it as the result, or if it's a function, returns the result
+     * of calling that function.
+     */
     private function defaultResolveFn($source, $args, $context, $info) {
         // ensure source is a value for which property access is acceptable.
         if (is_object($source) || is_callable($source)) {
@@ -216,6 +216,10 @@ class ExecutableSchema {
 
 
     private function assertResolveFunctionsPresent($schema, $resolverValidationOptions) {
+        if(empty($resolverValidationOptions)){
+            return;
+        }
+
         list($requireResolversForArgs, $requireResolversForNonScalar, $requireResolversForAllFields) = $resolverValidationOptions;
 
         if ($requireResolversForAllFields &&
@@ -229,7 +233,7 @@ class ExecutableSchema {
         $this->forEachField($schema, function($field, $typeName, $fieldName) use($requireResolversForAllFields){
             // requires a resolve function for *every* field.
             //if ($requireResolversForAllFields) {
-                $this->expectResolveFunction($field, $typeName, $fieldName);
+            $this->expectResolveFunction($field, $typeName, $fieldName);
             //}
 
             // requires a resolve function on every field that has arguments
@@ -282,12 +286,12 @@ class ExecutableSchema {
     }
 
     /**
-    * @param mixed $ast
-    * @returns DocumentNode
-    */
+     * @param mixed $ast
+     * @returns DocumentNode
+     */
     public static function extractExtensionDefinitions(DocumentNode $ast) {
         $extensionDefs = Utils::filter($ast->definitions, function ($node){
-            return $node->kind == NodeKind::TYPE_EXTENSION_DEFINITION;
+            return $node->kind == NodeKind::OBJECT_TYPE_EXTENSION;
         });
         $ast->definitions = $extensionDefs;
         return $ast;
@@ -295,7 +299,7 @@ class ExecutableSchema {
 
     public static function addResolveFunctionsToSchema(Schema &$schema, $resolveFunctions) {
         foreach ($resolveFunctions as $typeName => $resolver) {
-            
+
             $type = $schema->getType($typeName);
             if (!$type && $typeName !== '__schema') {
                 throw new SchemaError("\"$typeName\" defined in resolvers, but not in schema");
@@ -324,7 +328,7 @@ class ExecutableSchema {
                 }
                 $field = $fields[$fieldName];
                 $fieldResolve = $callable;
-                
+
                 if (is_callable($fieldResolve)) {
                     // for convenience. Allows shorter syntax in resolver definition file
                     self::setFieldProperties($field, ['resolve' => $fieldResolve ]);
@@ -339,14 +343,14 @@ class ExecutableSchema {
     }
 
     /**
-    * @param \GraphQL\Type\Schema $schema
-    * @param mixed $resolveFunctions
-    */
+     * @param \GraphQL\Type\Schema $schema
+     * @param mixed $resolveFunctions
+     */
     public static function addResolveFunctionsToSchemaOld(&$schema, $resolveFunctions) {
         foreach ($resolveFunctions as $typeName => $fnList) {
             /**
-            * @var \GraphQL\Type\Definition\Type
-            */
+             * @var \GraphQL\Type\Definition\Type
+             */
             $type = $schema->getType($typeName);
 
             if (!$type && $typeName !== '__schema') {
@@ -454,7 +458,7 @@ class ExecutableSchema {
         }
 
         Utils::mapValues($resolvedTypeDefinitions, function($x){
-           return trim($x);
+            return trim($x);
         });
 
         return implode("\n",array_unique($resolvedTypeDefinitions));

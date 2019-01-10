@@ -1,5 +1,5 @@
 <?php
-namespace Ola\Tools;
+namespace Ola\GraphQL\Tools;
 
 use GraphQL\Type\Schema;
 use GraphQL\Type\Introspection;
