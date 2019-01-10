@@ -1,5 +1,5 @@
 <?php
-namespace Ola\Tools;
+namespace Ola\GraphQL\Tools;
 
 use Ola\GraphQL\Tools\BuildClientSchema;
 use Ola\GraphQL\Tools\RoutingResolvers;
