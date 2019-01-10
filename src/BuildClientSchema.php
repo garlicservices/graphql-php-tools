@@ -191,8 +191,8 @@ class BuildClientSchema {
                 },
                 function ($valueIntrospection){
                     return [
-                        'description' => $fieldIntrospection->description,
-                        'deprecationReason' => $fieldIntrospection->deprecationReason
+                        'description' => $valueIntrospection->description,
+                        'deprecationReason' => $valueIntrospection->deprecationReason
                     ];
                 }
             )
@@ -277,6 +277,10 @@ class BuildClientSchema {
     *
     */
     private function getType($typeRef) {
+        if( ! isset($typeRef->kind)) {
+            return $this->getNamedType($typeRef->name);
+        }
+
         if (Utils::getTypeKindLiteral($typeRef->kind) === TypeKind::LIST_KIND) {
             $itemRef = $typeRef->ofType;
             if (!$itemRef) {
@@ -323,10 +327,10 @@ class BuildClientSchema {
 
     private function buildDirective($directiveIntrospection) {
         // Support deprecated `on****` fields for building `locations`, as this is used by GraphiQL which may need to support outdated servers.
-        $locations = isset($directiveIntrospection->locations) ? $directiveIntrospection->locations :  [];
-        $onField = !$directiveIntrospection->onField ? [] : [DirectiveLocation::FIELD];
-        $onOperation = !$directiveIntrospection->onOperation ? [] : [DirectiveLocation::QUERY, DirectiveLocation::MUTATION, DirectiveLocation::SUBSCRIPTION];
-        $onFragment = !$directiveIntrospection->onFragment ? [] : [DirectiveLocation::FRAGMENT_DEFINITION, DirectiveLocation::FRAGMENT_SPREAD, DirectiveLocation::INLINE_FRAGMENT];
+        $locations = $directiveIntrospection->locations ?? [];
+        $onField = isset($directiveIntrospection->onField) ? [DirectiveLocation::FIELD] : [];
+        $onOperation = isset($directiveIntrospection->onOperation) ? [DirectiveLocation::QUERY, DirectiveLocation::MUTATION, DirectiveLocation::SUBSCRIPTION] : [];
+        $onFragment = isset($directiveIntrospection->onFragment) ? [DirectiveLocation::FRAGMENT_DEFINITION, DirectiveLocation::FRAGMENT_SPREAD, DirectiveLocation::INLINE_FRAGMENT] : [];
 
         $locations = array_merge($locations, $onField, $onOperation, $onFragment);
 

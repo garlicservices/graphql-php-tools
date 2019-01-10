@@ -7,7 +7,7 @@
   ],
   "require": {
     "php": "^7.0",
-    "webonyx/graphql-php": "*"
+    "webonyx/graphql-php": "^0.13"
   },
   "require-dev": {
   },
