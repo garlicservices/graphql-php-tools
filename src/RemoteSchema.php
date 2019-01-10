@@ -55,7 +55,8 @@ class RemoteSchema{
 
         $response = curl_exec($chObj);
 
-        $introspectionResponse = array_pop(explode("\r\n\r\n",$response));
+        $responseParts = explode("\r\n\r\n",$response);
+        $introspectionResponse = array_pop($responseParts);
         $introspectionResult = json_decode($introspectionResponse);
 
         if(!$introspectionResult->data) throw new \Exception("Error reading schema introspection for endpoint ".$endpointURL);
