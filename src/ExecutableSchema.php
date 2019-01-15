@@ -30,9 +30,6 @@ use GraphQL\Type\Introspection;
 use GraphQL\Type\TypeKind;
 
 use GraphQL\Utils\BuildSchema;
-//use GraphQL\Utils\Utils;
-
-use Ola\Tools\ExtendSchema;
 
 class SchemaError extends \ErrorException {
     public $message;
