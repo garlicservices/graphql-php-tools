@@ -35,11 +35,6 @@ use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\GraphQL;
 
-
-use Ola\Tools\ExecutableSchema;
-use Ola\Tools\ExtendSchema;
-use Ola\Tools\TypeRegistry;
-
 Class MergeInfo {
     private $typeRegistry;
 
@@ -677,7 +672,7 @@ class MergeSchemas
         return $result;
     }
 
-    private function fieldToFieldConfig(\GraphQL\Type\Definition\FieldDefinition $field, \Ola\Tools\TypeRegistry $registry) {
+    private function fieldToFieldConfig(\GraphQL\Type\Definition\FieldDefinition $field, TypeRegistry $registry) {
         return [
             'type' => $registry->resolveType($field->getType()),
             'args' => $this->argsToFieldConfigArgumentMap($field->args, $registry),
@@ -694,7 +689,7 @@ class MergeSchemas
         return $result;
     }
 
-    private function argumentToArgumentConfig(\GraphQL\Type\Definition\FieldArgument $argument, \Ola\Tools\TypeRegistry $registry) {
+    private function argumentToArgumentConfig(\GraphQL\Type\Definition\FieldArgument $argument, TypeRegistry $registry) {
         return [
             'name' => $argument->name,
             'type' => $registry->resolveType($argument->getType()),
