@@ -1,4 +1,5 @@
 <?php
+
 namespace Ola\GraphQL\Tools;
 
 use GraphQL\Type\Definition\ListOfType;
@@ -9,12 +10,17 @@ use GraphQL\GraphQL;
 use GraphQL\Language\Parser;
 use GraphQL\Language\AST\NodeKind;
 
-class TypeRegistry {
+class TypeRegistry
+{
     public $fragmentReplacements;
     private $types;
     private $schemaByField; //query | mutation
 
-    public function __construct() {
+    /**
+     * TypeRegistry constructor.
+     */
+    public function __construct()
+    {
         $this->types = [];
         $this->schemaByField = [
             'query' => [],
@@ -23,34 +29,66 @@ class TypeRegistry {
         $this->fragmentReplacements = [];
     }
 
-    public function getSchemaByField($operation, $fieldName) {
+    /**
+     * @param $operation
+     * @param $fieldName
+     * @return mixed
+     */
+    public function getSchemaByField($operation, $fieldName)
+    {
         return $this->schemaByField[$operation][$fieldName];
     }
 
-    public function getAllTypes() {
+    /**
+     * @return array
+     */
+    public function getAllTypes()
+    {
         return array_values($this->types);
     }
 
-    public function getType($name) {
+    /**
+     * @param $name
+     * @return mixed
+     * @throws \ErrorException
+     */
+    public function getType($name)
+    {
         if (!$this->types[$name]) {
             throw new \ErrorException("No such type: \"$name\"");
         }
+
         return $this->types[$name];
     }
 
-    public function resolveType($type) {
+    /**
+     * @param $type
+     * @return mixed
+     * @throws \ErrorException
+     */
+    public function resolveType($type)
+    {
         if ($type instanceof ListOfType) {
             return Type::listOf($this->resolveType($type->getWrappedType(true)));
-        } else if ($type instanceof NonNull) {
-            return Type::nonNull($this->resolveType($type->getWrappedType(true)));
-        } else if (Type::getNamedType($type)) {
-            return $this->getType(Type::getNamedType($type)->name);
         } else {
-            return $type;
+            if ($type instanceof NonNull) {
+                return Type::nonNull($this->resolveType($type->getWrappedType(true)));
+            } else {
+                if (Type::getNamedType($type)) {
+                    return $this->getType(Type::getNamedType($type)->name);
+                } else {
+                    return $type;
+                }
+            }
         }
     }
 
-    public function addSchema($schema, $service = null) {
+    /**
+     * @param $schema
+     * @param null $service
+     */
+    public function addSchema($schema, $service = null)
+    {
         $query = $schema->getQueryType();
         if ($query) {
             $fieldNames = array_keys($query->getFields());
@@ -67,9 +105,15 @@ class TypeRegistry {
         }
     }
 
-    public function addType($name, $type, $onTypeConflict=null) {
+    /**
+     * @param $name
+     * @param $type
+     * @param null $onTypeConflict
+     */
+    public function addType($name, $type, $onTypeConflict = null)
+    {
         if (isset($this->types[$name])) {
-            if (!empty($onTypeConflict)) {
+            if (is_callable($onTypeConflict)) {
                 $type = call_user_func($onTypeConflict, $this->types[$name], $type);
             } else {
                 throw new Error("Type name conflict: \"$name\"");
@@ -78,20 +122,33 @@ class TypeRegistry {
         $this->types[$name] = $type;
     }
 
-    public function addFragment($typeName, $fieldName, $fragment) {
+    /**
+     * @param $typeName
+     * @param $fieldName
+     * @param $fragment
+     * @throws \ErrorException
+     */
+    public function addFragment($typeName, $fieldName, $fragment)
+    {
         if (!$this->fragmentReplacements[$typeName]) {
             $this->fragmentReplacements[$typeName] = [];
         }
         $this->fragmentReplacements[$typeName][$fieldName] = $this->parseFragmentToInlineFragment($fragment);
     }
 
-    private function parseFragmentToInlineFragment($definitions) {
+    /**
+     * @param $definitions
+     * @return array
+     * @throws \ErrorException
+     */
+    private function parseFragmentToInlineFragment($definitions)
+    {
         $document = Parser::parse($definitions);
         foreach ($document->definitions as $key => $definition) {
             if ($definition->kind == NodeKind::FRAGMENT_DEFINITION) {
                 return [
                     'kind' => NodeKind::INLINE_FRAGMENT,
-                    'typeCondition' =>  $definition->typeCondition,
+                    'typeCondition' => $definition->typeCondition,
                     'selectionSet' => $definition->selectionSet,
                 ];
             }
